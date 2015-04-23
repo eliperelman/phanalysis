@@ -34,7 +34,7 @@ class TestTalosAnalyzer(unittest.TestCase):
     def get_data(self):
         times  = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
         values = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1,  1,  1,  1,  1,  1,  1]
-        return [PerfDatum(t, t, t, float(v), t, t) for t, v in zip(times, values)]
+        return [PerfDatum(t, float(v)) for t, v in zip(times, values)]
 
     def test_analyze_t(self):
         a = TalosAnalyzer()
@@ -76,13 +76,16 @@ class TestTalosAnalyzer(unittest.TestCase):
         inputfile = open(os.path.join('test_data', filename))
         payload = json.load(inputfile)
         runs = payload['test_runs']
-        data = [PerfDatum(r[0], r[6], r[2], r[3], r[1][1], r[2], r[1][2]) for r in runs]
+        data = [PerfDatum(r[2], r[3], testrun_id=r[0], machine_id=r[6],
+                          testrun_timestamp=r[2], buildid=r[1][1],
+                          revision=r[1][2]) for r in runs]
 
         a = TalosAnalyzer()
         a.addData(data)
         results = a.analyze_t(BACK_WINDOW, FORE_WINDOW, THRESHOLD,
                 MACHINE_THRESHOLD, MACHINE_HISTORY_SIZE)
-        regression_timestamps = [d.timestamp for d in results if d.state == 'regression']
+        regression_timestamps = [d.testrun_timestamp for d in results if \
+                                 d.state == 'regression']
         self.assertEqual(regression_timestamps, expected_timestamps)
 
 if __name__ == '__main__':

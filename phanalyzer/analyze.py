@@ -57,25 +57,30 @@ def calc_t(w1, w2, weight_fn=None):
     return delta_s / (((s1['variance'] / s1['n']) + (s2['variance'] / s2['n'])) ** 0.5)
 
 class PerfDatum(object):
-    __slots__ = ('testrun_id', 'machine_id', 'timestamp', 'value', 'buildid',
-            'push_timestamp', 'revision', 'run_number', 'last_other', 'historical_stats',
-            'forward_stats', 't', 'state')
-    def __init__(self, testrun_id, machine_id, timestamp, value, buildid,
-                 push_timestamp, revision=None, state='good'):
+    def __init__(self, push_timestamp, value, testrun_timestamp=None,
+                 buildid=None, testrun_id=None, machine_id=None,
+                 revision=None, state='good'):
+        # Date code was pushed
+        self.push_timestamp = push_timestamp
+        # Value of this point
+        self.value = value
+
+        # Which build was this
+        self.buildid = buildid
+        # timestamp when test was run
+        if testrun_timestamp:
+            self.testrun_timestamp = testrun_timestamp
+        else:
+            # in some cases we may not have information on when test was run
+            # in that case just pretend its the same as when it was pushed
+            self.testrun_timestamp = push_timestamp
         # Which test run was this
         self.testrun_id = testrun_id
         # Which machine is this
         self.machine_id = machine_id
-        # Talos timestamp
-        self.timestamp = timestamp
-        # Value of this point
-        self.value = value
-        # Which build was this
-        self.buildid = buildid
-        # Date code was pushed
-        self.push_timestamp = push_timestamp
         # What revision this data is for
         self.revision = revision
+
         # t-test score
         self.t = 0
         # Whether a machine issue or perf regression is found
@@ -83,24 +88,26 @@ class PerfDatum(object):
 
     def __cmp__(self, o):
         return cmp(
-                (self.push_timestamp, self.timestamp),
-                (o.push_timestamp, o.timestamp),
+                (self.push_timestamp, self.testrun_timestamp),
+                (o.push_timestamp, o.testrun_timestamp),
                 )
 
     def __eq__(self, o):
         return cmp(
-                (self.timestamp, self.value, self.buildid, self.machine_id),
-                (o.timestamp, o.value, o.buildid, o.machine_id),
+                (self.testrun_timestamp, self.value, self.buildid, self.machine_id),
+                (o.testrun_timestamp, o.value, o.buildid, o.machine_id),
                 ) == 0
 
     def __ne__(self, o):
         return not self == o
 
     def __repr__(self):
-        return "<%s: %.3f, %i, %s>" % (self.buildid, self.value, self.timestamp, self.machine_id)
+        return "<%s: %.3f, %i, %s>" % (self.buildid, self.value,
+                                       self.testrun_timestamp, self.machine_id)
 
     def __str__(self):
-        return "Build %s on %s %s %s %s" % (self.buildid, self.timestamp,
+        return "Build %s on %s %s %s %s" % (self.buildid,
+                                            self.testrun_timestamp,
                                             self.push_timestamp, self.value,
                                             self.machine_id)
 

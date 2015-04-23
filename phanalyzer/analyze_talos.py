@@ -369,8 +369,8 @@ class AnalysisRunner:
         graph_datatype = 'geo'
 
         if d is not None:
-            start_time = (d.timestamp - 24*3600) * 1000
-            end_time = (d.timestamp + 24*3600) * 1000
+            start_time = (d.testrun_timestamp - 24*3600) * 1000
+            end_time = (d.testrun_timestamp + 24*3600) * 1000
             return "%(base_url)s/graph.html#tests=%(test_params)s&datatype=%(graph_datatype)s&sel=%(start_time)s,%(end_time)s" % locals()
         else:
             return "%(base_url)s/graph.html#tests=%(test_params)s&datatype=%(graph_datatype)s" % locals()
@@ -802,7 +802,7 @@ class AnalysisRunner:
         _d = self.dashboard_data[s.branch_name][test_name][s.os_name]
 
         for d in data:
-            if d.timestamp < sevenDaysAgo:
+            if d.testrun_timestamp < sevenDaysAgo:
                 continue
             machine_name = self.source.getMachineName(d.machine_id)
             if machine_name not in _d:
@@ -811,7 +811,7 @@ class AnalysisRunner:
                         'stats': [],
                         }
             results = _d[machine_name]['results']
-            results.append(d.timestamp)
+            results.append(d.testrun_timestamp)
             results.append(d.value)
 
         for machine_name in _d:
@@ -889,7 +889,7 @@ class AnalysisRunner:
         series_data = []
         for d in analysis_gen:
             skip = False
-            if d.timestamp < cutoff:
+            if d.testrun_timestamp < cutoff:
                 continue
 
             if d.state == "good":
@@ -897,10 +897,10 @@ class AnalysisRunner:
             else:
                 # Skip warnings about regressions we've already
                 # warned people about
-                if (d.buildid, d.timestamp) in warnings:
+                if (d.buildid, d.testrun_timestamp) in warnings:
                     skip = True
                 else:
-                    warnings.append((d.buildid, d.timestamp))
+                    warnings.append((d.buildid, d.testrun_timestamp))
                     if d.state == "machine":
                         machine_name = self.source.getMachineName(d.machine_id)
                         if 'bad_machines' not in self.warning_history:
