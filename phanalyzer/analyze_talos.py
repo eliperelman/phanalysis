@@ -351,7 +351,7 @@ class AnalysisRunner:
         for d in data:
             rev = dates.get(d.revision, None)
             if rev:
-                d.time = rev
+                d.push_timestamp = rev
 
     def shorten(self, url):
         if self.config.has_option('main', 'bitly_login'):
@@ -725,7 +725,7 @@ class AnalysisRunner:
                 series.branch_name, series.os_name, test_name)
 
         for d, skip, last_good in series_data:
-            graph_point = (d.time * 1000, d.value)
+            graph_point = (d.push_timestamp * 1000, d.value)
             all_data.append(graph_point)
             if d.state == "good":
                 good_data.append(graph_point)

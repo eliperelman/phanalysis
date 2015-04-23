@@ -58,10 +58,10 @@ def calc_t(w1, w2, weight_fn=None):
 
 class PerfDatum(object):
     __slots__ = ('testrun_id', 'machine_id', 'timestamp', 'value', 'buildid',
-            'time', 'revision', 'run_number', 'last_other', 'historical_stats',
+            'push_timestamp', 'revision', 'run_number', 'last_other', 'historical_stats',
             'forward_stats', 't', 'state')
-    def __init__(self, testrun_id, machine_id, timestamp, value, buildid, time,
-            revision=None, state='good'):
+    def __init__(self, testrun_id, machine_id, timestamp, value, buildid,
+                 push_timestamp, revision=None, state='good'):
         # Which test run was this
         self.testrun_id = testrun_id
         # Which machine is this
@@ -73,7 +73,7 @@ class PerfDatum(object):
         # Which build was this
         self.buildid = buildid
         # Date code was pushed
-        self.time = time
+        self.push_timestamp = push_timestamp
         # What revision this data is for
         self.revision = revision
         # t-test score
@@ -83,8 +83,8 @@ class PerfDatum(object):
 
     def __cmp__(self, o):
         return cmp(
-                (self.time, self.timestamp),
-                (o.time, o.timestamp),
+                (self.push_timestamp, self.timestamp),
+                (o.push_timestamp, o.timestamp),
                 )
 
     def __eq__(self, o):
@@ -100,7 +100,9 @@ class PerfDatum(object):
         return "<%s: %.3f, %i, %s>" % (self.buildid, self.value, self.timestamp, self.machine_id)
 
     def __str__(self):
-        return "Build %s on %s %s %s %s" % (self.buildid, self.timestamp, self.time, self.value, self.machine_id)
+        return "Build %s on %s %s %s %s" % (self.buildid, self.timestamp,
+                                            self.push_timestamp, self.value,
+                                            self.machine_id)
 
 
 class TalosAnalyzer:

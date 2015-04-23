@@ -42,7 +42,7 @@ class TestTalosAnalyzer(unittest.TestCase):
         data = self.get_data()
         a.addData(data)
 
-        result = [(d.time, d.state) for d in a.analyze_t(5, 5, 2, 15, 5)]
+        result = [(d.push_timestamp, d.state) for d in a.analyze_t(5, 5, 2, 15, 5)]
         self.assertEqual(result, [
             (1, 'good'),
             (2, 'good'),
