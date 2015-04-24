@@ -42,7 +42,9 @@ class TestTalosAnalyzer(unittest.TestCase):
         data = self.get_data()
         a.addData(data)
 
-        result = [(d.push_timestamp, d.state) for d in a.analyze_t(5, 5, 2, 15, 5)]
+        result = [(d.push_timestamp, d.state) for d in
+                  a.analyze_t(back_window=5, fore_window=5, t_threshold=2,
+                              machine_threshold=15, machine_history_size=5)]
         self.assertEqual(result, [
             (1, 'good'),
             (2, 'good'),

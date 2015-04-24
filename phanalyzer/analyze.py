@@ -127,10 +127,11 @@ class TalosAnalyzer:
         for d in self.machine_history.values():
             d.sort()
 
-    def analyze_t(self, j, k, threshold, machine_threshold=None,
-                  machine_history_size=None):
+    def analyze_t(self, back_window=12, fore_window=12, t_threshold=7,
+                  machine_threshold=None, machine_history_size=None):
         # Use T-Tests
         # Analyze test data using T-Tests, comparing data[i-j:i] to data[i:i+k]
+        (j, k) = (back_window, fore_window)
         good_data = []
 
         num_points = len(self.data) - k + 1
@@ -189,7 +190,7 @@ class TalosAnalyzer:
         # find where regressions most likely happened.
         for i in range(1, len(good_data) - 1):
             di = good_data[i]
-            if di.t <= threshold:
+            if di.t <= t_threshold:
                 continue
 
             # Check the adjacent points
