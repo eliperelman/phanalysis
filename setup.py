@@ -13,9 +13,13 @@ setup(name='phanalyzer',
       keywords='',
       author='William Lachance',
       author_email='wrlach@gmail.com',
+      entry_points="""
+          [console_scripts]
+          analyze_raptor = phanalyzer.analyze_raptor:cli
+        """,
       url='https://github.com/wlach/phanalyzer',
       license='MPL',
       packages=['phanalyzer'],
       zip_safe=False,
-      install_requires=[]
+      install_requires=['influxdb'] # for raptor
       )
