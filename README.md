@@ -6,3 +6,6 @@ automated regression detection inside Perfherder
 
 This repository is subject to be rebased (or even deleted) at any time. Please
 don't depend on it for anything. :)
+
+Credit for the original code goes to Chris Atlee <catlee@mozilla.com>,
+Matt Brubeck <mbrubeck@mozilla.com> and others.
