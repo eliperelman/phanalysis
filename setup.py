@@ -21,5 +21,5 @@ setup(name='phanalyzer',
       license='MPL',
       packages=['phanalyzer'],
       zip_safe=False,
-      install_requires=['influxdb'] # for raptor
+      install_requires=['influxdb', 'requests'] # for raptor
       )

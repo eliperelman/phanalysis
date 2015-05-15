@@ -5,11 +5,21 @@ from analyze import PerfDatum, TalosAnalyzer
 import json
 import re
 import sys
+import os
+import requests
+
+ALERT_HOST = os.getenv('ALERT_HOST', 'localhost')
+ALERT_PORT = os.getenv('ALERT_PORT', '3000')
+BRANCH = os.getenv('BRANCH', 'master')
+DEVICE = os.getenv('DEVICE', 'flame-kk')
+MEMORY = os.getenv('MEMORY', '319')
+
 
 RAPTOR_APPS = [ ('Clock', 'clock.gaiamobile.org'),
                 ('Phone', 'communications.gaiamobile.org'),
                 ('Contacts', 'communications.gaiamobile.org'),
-                ('Calendar', 'calendar.gaiamobile.org'), # no data?
+                ('Calendar', 'calendar.gaiamobile.org'),
+                ('Camera', 'camera.gaiamobile.org'),
                 ('E-Mail', 'email.gaiamobile.org'),
                 ('FM Radio', 'fm.gaiamobile.org'),
                 ('Gallery', 'gallery.gaiamobile.org'),
@@ -24,34 +34,38 @@ class B2GPerfDatum(PerfDatum):
         PerfDatum.__init__(self, push_timestamp, value, **kwargs)
         self.gaia_revision = gaia_revision
 
-def get_alerts(client, appname, context):
-    numbers = client.query("select time, mean(value) from coldlaunch.visuallyLoaded where appName = '%s' and context = '%s' and device='flame-kk' and branch='master' and memory='319' and time > '2015-03-31' group by time(1s) order ASC;" % (appname, context))
-    revinfo = client.query("select time, text from events where device='flame-kk' and branch='master' and memory='319' and time > '2015-03-31' group by time(1s) order ASC;")
+def get_revinfo(client):
+    query = "select time, text from events where device='%s' and branch='%s' and memory='%s' and time > now() - 7d group by time(1000u) order asc;" % (DEVICE, BRANCH, MEMORY)
+    results = client.query(query)
 
-    sequence_rev_list = []
-    for (timestamp, sequence_number, text) in revinfo[0]['points']:
-        (gaia_revision, gecko_revision) = re.match("^Gaia: (.*)<br/>Gecko: (.*)$",
-                                                   text).groups()
-        sequence_rev_list.append((timestamp, gaia_revision, gecko_revision))
+    revinfo = {}
+    for (timestamp, sequence_number, text) in results[0]['points']:
+        (gaia_revision, gecko_revision) = re.match("^Gaia: (.*)<br/>Gecko: (.*)$", text).groups()
+        revinfo[timestamp] = (gaia_revision, gecko_revision)
+
+    return revinfo
+
+def get_alerts(client, revinfo, appname, context):
+    numbers = client.query("select time, mean(value) from coldlaunch.visuallyLoaded where appName = '%s' and context = '%s' and device='%s' and branch='%s' and memory='%s' and time > now() - 7d group by time(1000u) order asc;" % (appname, context, DEVICE, BRANCH, MEMORY))
 
     perf_data = []
     values = []
+    ret = []
+
+    if not numbers:
+        return ret
+
     for (timestamp, value) in numbers[0]['points']:
-        # we sometimes have duplicate test runs for the same timestamp? or
-        # the revision info is otherwise missing. this is probably bad, and
-        # resulting in inaccurate data...
-        for (sequence_timestamp, gaia_revision, gecko_revision) in sequence_rev_list:
-            if sequence_timestamp <= timestamp:
-                revinfo = (sequence_timestamp, gaia_revision, gecko_revision)
-            else:
-                break
-        perf_data.append(B2GPerfDatum(revinfo[0], value, gaia_revision=revinfo[1],
-                                      revision=revinfo[2]))
+        if not timestamp in revinfo:
+            continue
+        else:
+            gaia_rev = revinfo[timestamp][0]
+            gecko_rev = revinfo[timestamp][1]
+            perf_data.append(B2GPerfDatum(timestamp, value, gaia_revision=gaia_rev, revision=gecko_rev))
 
     ta = TalosAnalyzer()
     ta.addData(perf_data)
     vals = ta.analyze_t()
-    ret = []
     for (i, r) in enumerate(vals):
         if r.state == 'regression':
             prevr = vals[i-1]
@@ -73,22 +87,34 @@ def cli():
 
     (host, username, password) = sys.argv[1:4]
     apps_to_process = sys.argv[4:]
-    all_raptor_apps = [r[0].lower() for r in RAPTOR_APPS]
+    all_raptor_apps = [re.sub('[ -]', '', r[0].lower()) for r in RAPTOR_APPS]
+
     if not apps_to_process:
         apps_to_process = all_raptor_apps
 
     client = InfluxDBClient(host, 8086, username, password, 'raptor')
+    revinfo = get_revinfo(client)
 
-    resultdict = {}
+    resultdict = ({
+        'branch': BRANCH,
+        'device': DEVICE,
+        'memory': MEMORY,
+        'results': {}
+    })
     for app_to_process in apps_to_process:
         if app_to_process not in all_raptor_apps:
             print "ERROR: App %s does not exist?!" % app_to_process
             sys.exit(1)
         for (appname, context) in RAPTOR_APPS:
-            if appname.lower() == app_to_process:
-                resultdict[app_to_process] = get_alerts(client, appname, context)
+            if re.sub('[ -]', '', appname.lower()) == app_to_process:
+                resultdict['results'][app_to_process] = get_alerts(client, revinfo, appname, context)
 
-    print json.dumps(resultdict)
+    url = 'http://%s:%s/' % (ALERT_HOST, ALERT_PORT)
+    headers = {'Content-Type': 'application/json'}
+    req = requests.post(url, data=json.dumps(resultdict), headers=headers)
+
+    print req.status_code
+    print req.content
 
 if __name__ == "__main__":
     cli()
