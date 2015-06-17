@@ -46,7 +46,7 @@ def get_revinfo(client):
     return revinfo
 
 def get_alerts(client, revinfo, appname, context):
-    numbers = client.query("select time, mean(value) from coldlaunch.visuallyLoaded where appName = '%s' and context = '%s' and device='%s' and branch='%s' and memory='%s' and time > now() - 7d group by time(1000u) order asc;" % (appname, context, DEVICE, BRANCH, MEMORY))
+    numbers = client.query("select time, percentile(value, 95) from coldlaunch.visuallyLoaded where appName = '%s' and context = '%s' and device='%s' and branch='%s' and memory='%s' and time > now() - 7d group by time(1000u) order asc;" % (appname, context, DEVICE, BRANCH, MEMORY))
 
     perf_data = []
     values = []
